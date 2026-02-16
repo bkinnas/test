@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Fill Form - {{ template.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Fill: {{ template.name }}</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Back</a>
+</div>
+
+<div class="card">
+    <form method="POST" id="fill-form">
+        {# ── Employee Selection ── #}
+        <div class="form-group">
+            <label>Employee</label>
+            <div style="display:flex; gap:1rem; margin-bottom:0.75rem;">
+                <label style="font-weight:normal; cursor:pointer;">
+                    <input type="radio" name="employee_mode" value="existing"
+                           {% if employees %}checked{% endif %}
+                           onchange="toggleEmployeeMode()"> Select Existing
+                </label>
+                <label style="font-weight:normal; cursor:pointer;">
+                    <input type="radio" name="employee_mode" value="new"
+                           {% if not employees %}checked{% endif %}
+                           onchange="toggleEmployeeMode()"> New Employee
+                </label>
+            </div>
+        </div>
+
+        {# ── Existing Employee Selector ── #}
+        <div id="existing-employee-section" {% if not employees %}style="display:none"{% endif %}>
+            <div class="form-group">
+                <label for="employee_select">Select Employee</label>
+                <select id="employee_select" name="employee_select" class="form-control"
+                        onchange="loadEmployeeData()">
+                    <option value="">-- Choose an employee --</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}">
+                        {{ emp.full_name }} ({{ emp.employee_id }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <p class="text-muted" id="autofill-hint" style="display:none;">
+                Employee details will be auto-filled. You only need to enter salary and other new fields below.
+            </p>
+        </div>
+
+        {# ── New Employee Fields ── #}
+        <div id="employee-fields-section">
+            {% if classified.employee_fields %}
+            <div class="form-section">
+                <h3>Employee Information</h3>
+                <div class="form-row">
+                    {% for field in classified.employee_fields %}
+                    <div class="form-group">
+                        <label for="{{ field }}">{{ field|field_label }}</label>
+                        <input type="text" id="{{ field }}" name="{{ field }}" class="form-control">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Salary Fields ── #}
+        {% if classified.salary_fields %}
+        <div class="form-section">
+            <h3>Salary Information</h3>
+            <p class="text-muted mb-1" id="salary-hint" style="display:none;">
+                This employee has a salary on record. Previous salary and raise details will be calculated automatically.
+            </p>
+            <div class="form-row">
+                {% for field in classified.salary_fields %}
+                {% if field in ('salary', 'new_salary') %}
+                <div class="form-group">
+                    <label for="{{ field }}">{{ field|field_label }}</label>
+                    <input type="text" id="{{ field }}" name="{{ field }}" class="form-control"
+                           placeholder="e.g. 75000">
+                </div>
+                {% elif field == 'effective_date' %}
+                <div class="form-group">
+                    <label for="{{ field }}">{{ field|field_label }}</label>
+                    <input type="date" id="{{ field }}" name="{{ field }}" class="form-control">
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Other / Custom Fields ── #}
+        {% if classified.other_fields %}
+        <div class="form-section">
+            <h3>Additional Fields</h3>
+            <div class="form-row">
+                {% for field in classified.other_fields %}
+                <div class="form-group">
+                    <label for="{{ field }}">{{ field|field_label }}</label>
+                    {% if field == 'date' or field.endswith('_date') %}
+                    <input type="date" id="{{ field }}" name="{{ field }}" class="form-control">
+                    {% elif field == 'reason' %}
+                    <input type="text" id="{{ field }}" name="{{ field }}" class="form-control"
+                           placeholder="e.g. Annual performance review">
+                    {% else %}
+                    <input type="text" id="{{ field }}" name="{{ field }}" class="form-control">
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Effective date + reason if not already in placeholders ── #}
+        {% if classified.salary_fields and 'effective_date' not in placeholders %}
+        <div class="form-section">
+            <h3>Record Details</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="effective_date">Effective Date</label>
+                    <input type="date" id="effective_date" name="effective_date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="reason">Reason</label>
+                    <input type="text" id="reason" name="reason" class="form-control"
+                           placeholder="e.g. Annual review">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-2">
+            <button type="submit" class="btn btn-success">Generate Form</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEmployeeMode() {
+    const mode = document.querySelector('input[name="employee_mode"]:checked').value;
+    const existingSection = document.getElementById('existing-employee-section');
+    const fieldsSection = document.getElementById('employee-fields-section');
+
+    if (mode === 'existing') {
+        existingSection.style.display = '';
+        fieldsSection.style.opacity = '0.4';
+        fieldsSection.querySelectorAll('input').forEach(i => i.readOnly = true);
+    } else {
+        existingSection.style.display = 'none';
+        fieldsSection.style.opacity = '1';
+        fieldsSection.querySelectorAll('input').forEach(i => { i.readOnly = false; i.value = ''; });
+        document.getElementById('autofill-hint').style.display = 'none';
+        document.getElementById('salary-hint') && (document.getElementById('salary-hint').style.display = 'none');
+    }
+}
+
+function loadEmployeeData() {
+    const empId = document.getElementById('employee_select').value;
+    if (!empId) return;
+
+    const templateId = {{ template.id }};
+    fetch(`/fill/${templateId}/employee-data/${empId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return;
+
+            // Auto-fill employee fields
+            for (const [key, value] of Object.entries(data)) {
+                const input = document.getElementById(key);
+                if (input) input.value = value;
+            }
+
+            document.getElementById('autofill-hint').style.display = '';
+
+            if (data.has_salary) {
+                const hint = document.getElementById('salary-hint');
+                if (hint) hint.style.display = '';
+            }
+        });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', toggleEmployeeMode);
+</script>
+{% endblock %}

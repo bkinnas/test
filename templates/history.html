@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Form History - Auto Form Filler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Form Generation History</h1>
+</div>
+
+<div class="card">
+    {% if submissions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Template</th>
+                    <th>Generated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('employee_detail', employee_id=sub.employee.id) }}">
+                            {{ sub.employee.full_name }}
+                        </a>
+                    </td>
+                    <td>{{ sub.template.name }}</td>
+                    <td>{{ sub.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('download_form', submission_id=sub.id) }}"
+                           class="btn btn-outline btn-sm">Download</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No forms have been generated yet.</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

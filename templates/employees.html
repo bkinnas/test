@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Employees - Auto Form Filler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Employees &amp; Salaries</h1>
+</div>
+
+<div class="card">
+    {% if not show_salary %}
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+        <p class="text-muted">Salary values are hidden. Enter your password to reveal them.</p>
+        <form method="POST" action="{{ url_for('reveal_salaries') }}" class="reveal-form">
+            <input type="password" name="password" placeholder="Your password" required>
+            <button type="submit" class="btn btn-outline btn-sm">Reveal Salaries</button>
+        </form>
+    </div>
+    {% else %}
+    <div style="margin-bottom:1rem;">
+        <span class="badge badge-green">Salaries Visible</span>
+        <a href="{{ url_for('employee_list') }}" class="btn btn-outline btn-sm" style="margin-left:0.5rem;">Hide Salaries</a>
+    </div>
+    {% endif %}
+
+    {% if employees %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Current Salary</th>
+                    <th>Raises</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td>{{ emp.employee_id }}</td>
+                    <td><strong>{{ emp.full_name }}</strong></td>
+                    <td>{{ emp.department or '—' }}</td>
+                    <td>{{ emp.position or '—' }}</td>
+                    <td>
+                        {% if emp.current_salary_encrypted %}
+                            {% if show_salary %}
+                            <span class="salary-revealed">${{ emp.current_salary_encrypted|decrypt_salary }}</span>
+                            {% else %}
+                            <span class="salary-masked">${{ emp.current_salary_encrypted|mask_salary }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ emp.salary_history|length }} record{{ 's' if emp.salary_history|length != 1 }}</span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('employee_detail', employee_id=emp.id, reveal='true' if show_salary else '') }}"
+                           class="btn btn-outline btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No employees yet. Employees are created when you fill out a form for the first time.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

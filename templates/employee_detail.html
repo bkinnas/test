@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.full_name }} - Auto Form Filler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ employee.full_name }}</h1>
+    <a href="{{ url_for('employee_list', reveal='true' if show_salary else '') }}" class="btn btn-outline">Back to Employees</a>
+</div>
+
+{# ── Employee Info ── #}
+<div class="card">
+    <h2>Employee Information</h2>
+    <div class="form-row">
+        <div>
+            <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+            <p><strong>Email:</strong> {{ employee.email or '—' }}</p>
+            <p><strong>Phone:</strong> {{ employee.phone or '—' }}</p>
+            <p><strong>Address:</strong> {{ employee.address or '—' }}</p>
+        </div>
+        <div>
+            <p><strong>Department:</strong> {{ employee.department or '—' }}</p>
+            <p><strong>Position:</strong> {{ employee.position or '—' }}</p>
+            <p><strong>Hire Date:</strong> {{ employee.hire_date or '—' }}</p>
+            <p><strong>Manager:</strong> {{ employee.manager_name or '—' }}</p>
+        </div>
+    </div>
+</div>
+
+{# ── Current Salary ── #}
+<div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between;">
+        <h2>Current Salary</h2>
+        {% if not show_salary %}
+        <form method="POST" action="{{ url_for('reveal_employee_salary', employee_id=employee.id) }}" class="reveal-form">
+            <input type="password" name="password" placeholder="Your password" required>
+            <button type="submit" class="btn btn-outline btn-sm">Reveal</button>
+        </form>
+        {% else %}
+        <a href="{{ url_for('employee_detail', employee_id=employee.id) }}" class="btn btn-outline btn-sm">Hide</a>
+        {% endif %}
+    </div>
+    <div style="font-size:1.8rem; font-weight:700; margin:1rem 0;">
+        {% if employee.current_salary_encrypted %}
+            {% if show_salary %}
+            <span class="salary-revealed">${{ employee.current_salary_encrypted|decrypt_salary }}</span>
+            {% else %}
+            <span class="salary-masked">${{ employee.current_salary_encrypted|mask_salary }}</span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted">Not set</span>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Salary History ── #}
+<div class="card">
+    <h2>Salary &amp; Raise History</h2>
+    {% if employee.salary_history %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Effective Date</th>
+                    <th>Salary</th>
+                    <th>Previous</th>
+                    <th>Raise Amount</th>
+                    <th>Raise %</th>
+                    <th>Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in employee.salary_history %}
+                <tr>
+                    <td>{{ record.effective_date }}</td>
+                    <td>
+                        {% if show_salary %}
+                        <span class="salary-revealed">${{ record.salary_encrypted|decrypt_salary }}</span>
+                        {% else %}
+                        <span class="salary-masked">${{ record.salary_encrypted|mask_salary }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.previous_salary_encrypted %}
+                            {% if show_salary %}
+                            <span class="salary-revealed">${{ record.previous_salary_encrypted|decrypt_salary }}</span>
+                            {% else %}
+                            <span class="salary-masked">${{ record.previous_salary_encrypted|mask_salary }}</span>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.raise_amount_encrypted %}
+                            {% if show_salary %}
+                            <span class="salary-revealed">${{ record.raise_amount_encrypted|decrypt_salary }}</span>
+                            {% else %}
+                            <span class="salary-masked">${{ record.raise_amount_encrypted|mask_salary }}</span>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ record.raise_percentage or '—' }}</td>
+                    <td>{{ record.reason or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No salary history recorded yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Form Submissions ── #}
+<div class="card">
+    <h2>Generated Forms</h2>
+    {% if submissions %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Template</th>
+                    <th>Generated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in submissions %}
+                <tr>
+                    <td>{{ sub.template.name }}</td>
+                    <td>{{ sub.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('download_form', submission_id=sub.id) }}"
+                           class="btn btn-outline btn-sm">Download</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No forms generated for this employee yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

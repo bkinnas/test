@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Upload Template - Auto Form Filler{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Upload Form Template</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+</div>
+
+<div class="card">
+    <h2>Upload a .docx Template</h2>
+    <p class="text-muted mb-1">
+        Use <code>{{ "{{field_name}}" }}</code> placeholders in your Word document.
+        The system will detect them and create a form for filling them in.
+    </p>
+    <p class="text-muted mb-1">
+        <strong>Supported placeholders:</strong>
+        <code>{{ "{{employee_name}}" }}</code>,
+        <code>{{ "{{first_name}}" }}</code>,
+        <code>{{ "{{last_name}}" }}</code>,
+        <code>{{ "{{employee_id}}" }}</code>,
+        <code>{{ "{{email}}" }}</code>,
+        <code>{{ "{{department}}" }}</code>,
+        <code>{{ "{{position}}" }}</code>,
+        <code>{{ "{{hire_date}}" }}</code>,
+        <code>{{ "{{salary}}" }}</code>,
+        <code>{{ "{{new_salary}}" }}</code>,
+        <code>{{ "{{previous_salary}}" }}</code>,
+        <code>{{ "{{raise_amount}}" }}</code>,
+        <code>{{ "{{raise_percentage}}" }}</code>,
+        <code>{{ "{{effective_date}}" }}</code>,
+        <code>{{ "{{date}}" }}</code>,
+        <code>{{ "{{manager_name}}" }}</code>,
+        or any custom <code>{{ "{{your_field}}" }}</code>.
+    </p>
+
+    <form method="POST" enctype="multipart/form-data" class="mt-2">
+        <div class="form-group">
+            <label for="name">Template Name</label>
+            <input type="text" id="name" name="name" class="form-control"
+                   placeholder="e.g. Annual Salary Adjustment Letter">
+        </div>
+        <div class="form-group">
+            <label for="file">Word Document (.docx)</label>
+            <input type="file" id="file" name="file" accept=".docx" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload Template</button>
+    </form>
+</div>
+{% endblock %}
