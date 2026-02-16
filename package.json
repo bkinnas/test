@@ -10,7 +10,8 @@
     "dev:client": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist/server/index.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "setup": "node scripts/setup.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

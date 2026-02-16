@@ -1,14 +1,155 @@
 # Invoice Aggregator
 
 Automated invoice collection from multiple advertising and service platforms.
-Upload your monthly Brex export, and the app matches each transaction to a
+Upload your monthly Brex export and the app matches each transaction to a
 configured provider and fetches the corresponding invoice via API, email, or
 portal scraping.
+
+---
+
+## Prerequisites
+
+Before you begin, make sure you have **Node.js version 18 or higher** installed.
+
+**Check if Node.js is installed** by opening a terminal and running:
+
+```
+node --version
+```
+
+If you see a version number like `v18.x.x` or higher, you're good. If you get
+an error or see a version below 18, download and install Node.js from:
+
+https://nodejs.org
+
+(Choose the **LTS** version. The installer works on Windows, Mac, and Linux.)
+
+---
+
+## Getting Started (Step by Step)
+
+### Step 1: Open a Terminal
+
+- **Windows**: Press `Win + R`, type `cmd`, and press Enter. Or search for
+  "Command Prompt" or "PowerShell" in the Start menu.
+- **Mac**: Open the "Terminal" app (in Applications > Utilities).
+- **Linux**: Open your terminal emulator.
+
+### Step 2: Navigate to the Project Folder
+
+Use the `cd` command to go to the folder where you downloaded/cloned this
+project. For example:
+
+```
+cd C:\Users\YourName\Documents\invoice-aggregator
+```
+
+(Replace the path with wherever your project folder actually is.)
+
+### Step 3: Install Dependencies
+
+Run this command:
+
+```
+npm install
+```
+
+This downloads all the libraries the app needs. It may take a minute or two.
+You'll see some progress output — wait until it finishes.
+
+> **If you get an error about "execution policy" on Windows (PowerShell):**
+> Run this first, then try `npm install` again:
+> ```
+> Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+> ```
+
+> **If you get a "permission denied" error on Mac/Linux:**
+> Try: `sudo npm install`
+
+### Step 4: Run Setup
+
+This creates your configuration file and required folders:
+
+```
+npm run setup
+```
+
+You should see output like:
+```
+===========================================
+  Invoice Aggregator — Setup
+===========================================
+
+[OK] Node.js v20.x.x
+[OK] Created .env from .env.example
+[OK] Created directory: data
+[OK] Created directory: data/invoices
+[OK] Created directory: uploads
+
+  Setup complete!
+```
+
+### Step 5: Start the App
+
+```
+npm run dev
+```
+
+This starts both the backend server and the frontend. You should see output
+indicating both are running.
+
+### Step 6: Open in Your Browser
+
+Go to:
+
+**http://localhost:3000**
+
+You should see the Invoice Aggregator dashboard.
+
+---
+
+## How to Use
+
+### 1. Configure Your Providers
+
+Before uploading a Brex export, set up at least one provider:
+
+1. Click **Providers** in the top navigation
+2. You'll see the built-in providers (Google Ads, Meta Ads, etc.)
+3. Click the **toggle switch** to enable a provider
+4. Click **Configure** to enter your API credentials and settings
+5. Make sure the **vendor patterns** match how the vendor appears in your
+   Brex export (e.g., "google ads", "meta platforms")
+6. Click **Save Configuration**
+
+### 2. Upload Your Brex Export
+
+1. Click **Upload** in the top navigation
+2. Drag and drop your Brex CSV or XLSX file, or click to browse
+3. The app parses your transactions and shows which ones matched a provider
+
+### 3. Fetch Invoices
+
+1. After uploading, you'll see a results page with matched transactions
+2. Click **Fetch All Invoices** to start pulling invoices from each provider
+3. Watch the progress bar as each provider is queried
+4. Download individual invoices or view the status of each one
+
+### 4. Add Custom Providers
+
+For services not built-in (like TikTok Ads, Shopify, etc.):
+
+1. Go to **Providers** and click **+ Add Custom Provider**
+2. Enter the provider name and vendor patterns
+3. Configure email sender patterns or a portal URL
+4. Enable the provider and save
+
+---
 
 ## Built-in Providers
 
 | Provider    | API | Email | Portal Scraping |
-|------------|-----|-------|-----------------|
+|-------------|-----|-------|-----------------|
 | Google Ads  | Yes | Yes   | Yes             |
 | Meta Ads    | Yes | Yes   | Yes             |
 | Criteo      | Yes | Yes   | Yes             |
@@ -16,171 +157,166 @@ portal scraping.
 | AppLovin    | Yes | Yes   | Yes             |
 | Custom      | --  | Yes   | Yes             |
 
-You can add unlimited custom providers through the UI for any other service.
+---
 
-## Quick Start
+## Invoice Fetch Methods
 
-```bash
-# 1. Install dependencies
-npm install
+The app supports three ways to get invoices from each provider. You pick
+which method to use per provider in the Providers settings.
 
-# 2. Copy and configure environment
-cp .env.example .env
-# Edit .env with your API credentials, email IMAP settings, etc.
+### API (Direct)
 
-# 3. Run in development mode (frontend + backend)
-npm run dev
-```
+Calls the provider's billing API directly. This is the fastest and most
+reliable method, but requires API credentials for each service.
 
-The app runs at:
-- **Frontend**: http://localhost:3000 (Vite dev server)
-- **Backend API**: http://localhost:3001/api
+### Email (IMAP)
 
-## Production Build
+Connects to your email inbox and searches for invoice emails from the
+provider (e.g., emails from `payments-noreply@google.com`). To use this
+method, open the `.env` file in a text editor and fill in your email settings:
 
-```bash
-npm run build
-npm start
-# Serves both API and frontend on http://localhost:3001
-```
-
-## How It Works
-
-1. **Upload** — Drop a Brex CSV or XLSX export into the upload page
-2. **Match** — The app parses transactions and matches vendor names against
-   configured provider patterns (e.g. "google ads" matches the Google Ads provider)
-3. **Fetch** — Click "Fetch All Invoices" to pull invoices from each provider
-   using your preferred method (API, email parsing, or portal scraping)
-4. **Download** — View status per invoice and download PDFs from the results page
-
-## Configuration
-
-### Provider Setup
-
-Go to the **Providers** tab in the UI to:
-- Enable/disable providers
-- Enter API credentials
-- Set vendor name patterns (how Brex transactions are matched)
-- Choose fetch method (API, email, or portal scraping)
-- Add custom providers for any service
-
-### Fetch Methods
-
-**API** — Direct integration with the provider's billing API. Requires
-API credentials (OAuth tokens, API keys, etc.) configured per provider.
-
-**Email** — Connects to your IMAP inbox and searches for invoice emails
-from the provider. Requires IMAP settings in `.env`:
 ```
 EMAIL_IMAP_HOST=imap.gmail.com
 EMAIL_IMAP_PORT=993
-EMAIL_IMAP_USER=you@company.com
+EMAIL_IMAP_USER=you@yourcompany.com
 EMAIL_IMAP_PASSWORD=your-app-password
 EMAIL_IMAP_TLS=true
 ```
 
-**Portal Scraping** — Uses Puppeteer (headless Chrome) to log into the
-provider's billing portal and download invoices. Requires:
-- Chrome/Chromium installed on the system
-- Set `PUPPETEER_EXECUTABLE_PATH` in `.env` to the Chrome binary path
-- Portal login credentials in the provider config
+> **Gmail users**: You need to create an "App Password" in your Google
+> Account settings. Your regular Gmail password won't work.
 
-### Brex Export Format
+### Portal Scraping
 
-The parser handles common Brex CSV/XLSX column names:
-- **Date**: `Date`, `Posted Date`, `Transaction Date`
-- **Vendor**: `Merchant`, `Merchant Name`, `Vendor`, `Name`
-- **Amount**: `Amount`, `Amount (USD)`, `Total`
-- **Category**: `Category`, `Expense Category` (optional)
-- **Currency**: `Currency` (defaults to USD)
+Uses a headless browser (Chrome) to log into the provider's billing portal
+and download invoices automatically. To use this method, you need Chrome
+or Chromium installed on your computer. Open the `.env` file and set the
+path to your Chrome executable:
 
-### Adding a New Provider (Code)
-
-1. Create a new file in `src/server/providers/`:
-
-```typescript
-import { BaseProvider } from "./base-provider.js";
-import { registry } from "./provider-registry.js";
-
-class MyProvider extends BaseProvider {
-  readonly id = "my-provider";
-  readonly name = "My Provider";
-
-  async fetchViaApi(transaction, config) {
-    // Your API integration logic
-  }
-}
-
-const provider = new MyProvider();
-registry.register(provider, {
-  id: "my-provider",
-  name: "My Provider",
-  description: "Fetch invoices from My Provider",
-  icon: "custom",
-  supportedMethods: ["api", "email", "portal"],
-  defaultVendorPatterns: ["my provider"],
-  requiredSettings: [
-    { key: "apiKey", label: "API Key", type: "password", required: true },
-  ],
-});
+```
+PUPPETEER_EXECUTABLE_PATH=C:\Program Files\Google\Chrome\Application\chrome.exe
 ```
 
-2. Import the file in `src/server/index.ts`:
-```typescript
-import "./providers/my-provider.js";
+Common Chrome paths:
+- **Windows**: `C:\Program Files\Google\Chrome\Application\chrome.exe`
+- **Mac**: `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+- **Linux**: `/usr/bin/google-chrome`
+
+---
+
+## Configuration File (.env)
+
+The `.env` file stores your credentials and settings. It was created
+automatically by `npm run setup`. Open it in any text editor (Notepad,
+VS Code, etc.) to add your API keys.
+
+**Where is it?** It's in the root of your project folder, named `.env`
+
+> **Note on Windows**: Files starting with a dot may be hidden by default.
+> In File Explorer, click View > Show > Hidden items to see it. Or just
+> open it directly from your text editor using File > Open.
+
+You only need to fill in the sections for the providers and methods you
+plan to use. Leave the rest blank.
+
+---
+
+## Brex Export Format
+
+The app automatically detects common column names from Brex exports:
+
+| What the app looks for | Column names that work |
+|------------------------|------------------------|
+| Transaction date       | `Date`, `Posted Date`, `Transaction Date` |
+| Vendor name            | `Merchant`, `Merchant Name`, `Vendor`, `Name` |
+| Amount                 | `Amount`, `Amount (USD)`, `Total` |
+| Category (optional)    | `Category`, `Expense Category` |
+| Currency (optional)    | `Currency` (defaults to USD if missing) |
+
+Both `.csv` and `.xlsx` files are supported.
+
+---
+
+## Troubleshooting
+
+### "npm is not recognized" or "node is not recognized"
+
+Node.js is not installed (or not in your PATH). Download and install it
+from https://nodejs.org. After installing, **close and reopen** your
+terminal, then try again.
+
+### npm install shows errors
+
+Try these in order:
+1. Make sure you're in the correct project folder (`cd` to it first)
+2. Delete the `node_modules` folder and `package-lock.json`, then run
+   `npm install` again
+3. On Windows, try running Command Prompt as Administrator
+
+### "port 3000 already in use"
+
+Another app is using port 3000. Either close that app, or change the
+frontend port in `vite.config.ts` (look for `port: 3000`).
+
+### "port 3001 already in use"
+
+Change `PORT=3001` to a different number in your `.env` file.
+
+### Can't see the .env file on Windows
+
+Files starting with `.` are hidden by default. In File Explorer: View >
+Show > Hidden items. Or open it from your text editor directly.
+
+---
+
+## Production Build
+
+When you want to deploy this to a server:
+
 ```
+npm run build
+npm start
+```
+
+This builds an optimized version and serves everything on port 3001.
+
+---
+
+## Adding a New Provider via Code
+
+To add support for a new service with full API integration:
+
+1. Create a file in `src/server/providers/` (e.g., `tiktok-ads.ts`)
+2. Extend `BaseProvider` and implement `fetchViaApi`, `fetchViaEmail`,
+   or `fetchViaPortal` as needed
+3. Register it with the provider registry
+4. Import the file in `src/server/index.ts`
+
+See any of the existing providers (like `google-ads.ts`) as a reference.
+
+---
 
 ## Project Structure
 
 ```
-src/
-  server/                  # Express backend
-    index.ts               # Server entry point
-    routes/
-      upload.ts            # POST /api/upload
-      invoices.ts          # Invoice job management
-      providers.ts         # Provider CRUD
-      settings.ts          # Health check and settings
-    services/
-      spreadsheet-parser.ts  # Brex CSV/XLSX parser
-      invoice-aggregator.ts  # Orchestration engine
-      email-fetcher.ts       # IMAP email search
-      portal-scraper.ts      # Puppeteer portal scraper
-      config-store.ts        # Persistent config storage
-    providers/
-      base-provider.ts       # Abstract base class
-      provider-registry.ts   # Plugin registry
-      google-ads.ts
-      meta-ads.ts
-      criteo.ts
-      amazon-ads.ts
-      applovin.ts
-      custom-provider.ts     # Template for custom providers
-  client/                  # React frontend
-    App.tsx                # Main app with navigation
-    components/
-      Dashboard.tsx        # Job list and overview
-      FileUpload.tsx       # Drag-and-drop upload
-      JobViewer.tsx        # Invoice results and progress
-      ProviderManager.tsx  # Provider configuration
-  shared/
-    types.ts               # Shared TypeScript types
+invoice-aggregator/
+  scripts/
+    setup.js               # Setup script (npm run setup)
+  src/
+    server/                # Backend (Express API)
+      index.ts             # Server entry point
+      routes/              # API endpoints
+      services/            # Business logic
+      providers/           # Invoice provider plugins
+    client/                # Frontend (React)
+      App.tsx              # Main app
+      components/          # UI components
+    shared/
+      types.ts             # Shared TypeScript types
+  .env                     # Your local config (not committed to git)
+  .env.example             # Template for .env
+  package.json             # Dependencies and scripts
 ```
-
-## API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST   | `/api/upload` | Upload Brex CSV/XLSX |
-| GET    | `/api/invoices/jobs` | List all jobs |
-| GET    | `/api/invoices/jobs/:id` | Get job details |
-| POST   | `/api/invoices/jobs/:id/fetch` | Start fetching invoices |
-| GET    | `/api/invoices/download/:jobId/:invoiceId` | Download invoice file |
-| GET    | `/api/providers/definitions` | List provider templates |
-| GET    | `/api/providers/configs` | List configured providers |
-| PUT    | `/api/providers/configs/:id` | Update provider config |
-| POST   | `/api/providers/configs` | Add custom provider |
-| DELETE | `/api/providers/configs/:id` | Remove provider |
 
 ## Tech Stack
 
