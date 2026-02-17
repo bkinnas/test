@@ -168,6 +168,43 @@ class CriteoProvider extends BaseProvider {
     }
   }
 
+  async fetchViaOutlook(
+    transaction: BrexTransaction,
+    config: ProviderConfig
+  ): Promise<InvoiceFetchResult> {
+    const { OutlookFetcher } = await import("../services/outlook-fetcher.js");
+    const fetcher = new OutlookFetcher();
+
+    const senders = config.emailSenderPatterns || ["noreply@criteo.com", "billing@criteo.com"];
+    const txDate = new Date(transaction.date);
+    const dateFrom = new Date(txDate.getFullYear(), txDate.getMonth(), 1).toISOString().split("T")[0]!;
+    const dateTo = new Date(txDate.getFullYear(), txDate.getMonth() + 1, 5).toISOString().split("T")[0]!;
+
+    const outputDir = path.join(DATA_DIR, "invoices", "criteo");
+    await fs.mkdir(outputDir, { recursive: true });
+
+    try {
+      const emails = await fetcher.searchInvoiceEmails(
+        { senderPatterns: senders, dateFrom, dateTo, folderPath: process.env.OUTLOOK_FOLDER_PATH || "Inbox" },
+        outputDir
+      );
+
+      for (const email of emails) {
+        if (email.attachments.length > 0) {
+          const att = email.attachments[0]!;
+          return { success: true, filePath: att.filePath, fileName: att.filename, mimeType: att.contentType };
+        }
+      }
+
+      return { success: false, errorMessage: "No Criteo invoice found in Outlook" };
+    } catch (err) {
+      return {
+        success: false,
+        errorMessage: `Outlook fetch error: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
   async fetchViaPortal(
     transaction: BrexTransaction,
     config: ProviderConfig
@@ -222,7 +259,7 @@ registry.register(provider, {
   name: "Criteo",
   description: "Fetch invoices from Criteo advertising platform",
   icon: "criteo",
-  supportedMethods: ["api", "email", "portal"],
+  supportedMethods: ["api", "email", "outlook", "portal"],
   defaultVendorPatterns: ["criteo", "criteo sa"],
   defaultEmailSenderPatterns: ["noreply@criteo.com", "billing@criteo.com"],
   defaultPortalUrl: "https://marketing.criteo.com",

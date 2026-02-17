@@ -80,6 +80,47 @@ class CustomProvider extends BaseProvider {
     }
   }
 
+  async fetchViaOutlook(
+    transaction: BrexTransaction,
+    config: ProviderConfig
+  ): Promise<InvoiceFetchResult> {
+    const { OutlookFetcher } = await import("../services/outlook-fetcher.js");
+    const fetcher = new OutlookFetcher();
+
+    const senders = config.emailSenderPatterns || [];
+    if (senders.length === 0) {
+      return { success: false, errorMessage: "No email sender patterns configured for Outlook search" };
+    }
+
+    const txDate = new Date(transaction.date);
+    const dateFrom = new Date(txDate.getFullYear(), txDate.getMonth(), 1).toISOString().split("T")[0]!;
+    const dateTo = new Date(txDate.getFullYear(), txDate.getMonth() + 1, 5).toISOString().split("T")[0]!;
+
+    const outputDir = path.join(DATA_DIR, "invoices", config.id);
+    await fs.mkdir(outputDir, { recursive: true });
+
+    try {
+      const emails = await fetcher.searchInvoiceEmails(
+        { senderPatterns: senders, dateFrom, dateTo, folderPath: process.env.OUTLOOK_FOLDER_PATH || "Inbox" },
+        outputDir
+      );
+
+      for (const email of emails) {
+        if (email.attachments.length > 0) {
+          const att = email.attachments[0]!;
+          return { success: true, filePath: att.filePath, fileName: att.filename, mimeType: att.contentType };
+        }
+      }
+
+      return { success: false, errorMessage: `No invoice emails found for ${config.name} in Outlook` };
+    } catch (err) {
+      return {
+        success: false,
+        errorMessage: `Outlook fetch error: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
   async fetchViaPortal(
     transaction: BrexTransaction,
     config: ProviderConfig
@@ -133,7 +174,7 @@ registry.register(provider, {
   name: "Custom Provider",
   description: "Template for adding any new service. Supports email parsing and portal scraping.",
   icon: "custom",
-  supportedMethods: ["email", "portal"],
+  supportedMethods: ["email", "outlook", "portal"],
   defaultVendorPatterns: [],
   requiredSettings: [
     { key: "email", label: "Login Email", type: "text", required: false, placeholder: "user@example.com" },

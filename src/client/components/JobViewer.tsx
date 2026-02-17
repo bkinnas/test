@@ -12,6 +12,8 @@ export function JobViewer({ jobId, onBack }: JobViewerProps) {
   const { data, loading, error, execute, setData } =
     useAsync<JobStatusResponse>();
   const [fetching, setFetching] = useState(false);
+  const [bundleDateFrom, setBundleDateFrom] = useState("");
+  const [bundleDateTo, setBundleDateTo] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadJob = async () => {
@@ -211,6 +213,57 @@ export function JobViewer({ jobId, onBack }: JobViewerProps) {
         <div className="card text-center py-12 text-gray-500">
           No invoices matched. Configure providers with vendor name patterns to
           match your Brex transactions.
+        </div>
+      )}
+
+      {/* Bundle Download */}
+      {job.invoicesDownloaded > 0 && (
+        <div className="card mt-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            Download Invoice Bundle (ZIP)
+          </h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Select a date range to bundle invoices into a single ZIP download.
+            Leave empty to include all downloaded invoices.
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                From
+              </label>
+              <input
+                type="date"
+                value={bundleDateFrom}
+                onChange={(e) => setBundleDateFrom(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                To
+              </label>
+              <input
+                type="date"
+                value={bundleDateTo}
+                onChange={(e) => setBundleDateTo(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              />
+            </div>
+            <a
+              href={`/api/invoices/bundle/${job.id}?${new URLSearchParams(
+                Object.fromEntries(
+                  [
+                    ["dateFrom", bundleDateFrom],
+                    ["dateTo", bundleDateTo],
+                  ].filter(([, v]) => v)
+                )
+              ).toString()}`}
+              className="btn-primary text-sm inline-flex items-center"
+              download
+            >
+              Download ZIP
+            </a>
+          </div>
         </div>
       )}
 

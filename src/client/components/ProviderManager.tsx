@@ -47,7 +47,7 @@ export function ProviderManager() {
       name,
       vendorPatterns,
       enabled: false,
-      supportedMethods: ["email", "portal"],
+      supportedMethods: ["email", "outlook", "portal"],
       preferredMethod: "email",
       settings: {},
     });
@@ -261,14 +261,17 @@ function ProviderConfigForm({
                 ? "API (Direct)"
                 : m === "email"
                   ? "Email (IMAP)"
-                  : "Portal (Scraping)"}
+                  : m === "outlook"
+                    ? "Outlook (Desktop)"
+                    : "Portal (Scraping)"}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Email sender patterns */}
-      {form.supportedMethods.includes("email") && (
+      {/* Email sender patterns (used by both IMAP email and Outlook) */}
+      {(form.supportedMethods.includes("email") ||
+        form.supportedMethods.includes("outlook")) && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Email Sender Patterns

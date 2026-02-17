@@ -31,6 +31,12 @@ export interface InvoiceProvider {
     config: ProviderConfig
   ): Promise<InvoiceFetchResult>;
 
+  /** Fetch an invoice via local Outlook desktop search */
+  fetchViaOutlook(
+    transaction: BrexTransaction,
+    config: ProviderConfig
+  ): Promise<InvoiceFetchResult>;
+
   /** Fetch an invoice via portal scraping */
   fetchViaPortal(
     transaction: BrexTransaction,
@@ -55,4 +61,9 @@ export interface EmailConfig {
 export interface ScraperContext {
   headless: boolean;
   dataDir: string;
+}
+
+export interface OutlookConfig {
+  /** Outlook folder to search (e.g. "Inbox", "Inbox/Invoices") */
+  folderPath: string;
 }

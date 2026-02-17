@@ -1,6 +1,7 @@
 import { Router } from "express";
 import fs from "fs/promises";
 import path from "path";
+import archiver from "archiver";
 import { aggregator } from "../services/invoice-aggregator.js";
 import { configStore } from "../services/config-store.js";
 import type { ApiResponse, AggregationJob, JobStatusResponse } from "../../shared/types.js";
@@ -106,4 +107,84 @@ invoicesRouter.get("/download-all/:jobId", async (req, res) => {
     }));
 
   res.json({ success: true, data: downloadable } satisfies ApiResponse);
+});
+
+/**
+ * GET /api/invoices/bundle/:jobId?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD
+ * Bundle all downloaded invoices within a date range into a ZIP file.
+ * If no date range is provided, bundles all downloaded invoices in the job.
+ */
+invoicesRouter.get("/bundle/:jobId", async (req, res) => {
+  const job = aggregator.getJob(req.params.jobId!);
+  if (!job) {
+    res.status(404).json({ success: false, error: "Job not found" } satisfies ApiResponse);
+    return;
+  }
+
+  const dateFrom = req.query.dateFrom as string | undefined;
+  const dateTo = req.query.dateTo as string | undefined;
+
+  // Filter to downloaded invoices with files on disk
+  let invoices = job.invoices.filter(
+    (inv) => inv.status === "downloaded" && inv.filePath
+  );
+
+  // Apply date range filter if provided
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    invoices = invoices.filter((inv) => new Date(inv.date) >= from);
+  }
+  if (dateTo) {
+    const to = new Date(dateTo);
+    // Include the end date (set to end of day)
+    to.setHours(23, 59, 59, 999);
+    invoices = invoices.filter((inv) => new Date(inv.date) <= to);
+  }
+
+  if (invoices.length === 0) {
+    res.status(404).json({
+      success: false,
+      error: "No downloaded invoices found for the specified date range",
+    } satisfies ApiResponse);
+    return;
+  }
+
+  // Build ZIP file name
+  const rangePart = dateFrom && dateTo
+    ? `_${dateFrom}_to_${dateTo}`
+    : dateFrom
+      ? `_from_${dateFrom}`
+      : dateTo
+        ? `_to_${dateTo}`
+        : "";
+  const zipFileName = `invoices${rangePart}.zip`;
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${zipFileName}"`);
+
+  const archive = archiver("zip", { zlib: { level: 6 } });
+
+  archive.on("error", (err) => {
+    console.error("[bundle] Archive error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: "Failed to create ZIP archive" } satisfies ApiResponse);
+    }
+  });
+
+  // Pipe the archive directly to the response
+  archive.pipe(res);
+
+  // Add each invoice file to the archive, organized by provider
+  for (const inv of invoices) {
+    try {
+      await fs.access(inv.filePath!);
+      const providerDir = inv.providerName.replace(/[^a-zA-Z0-9]/g, "_");
+      const fileName = inv.fileName || path.basename(inv.filePath!);
+      archive.file(inv.filePath!, { name: `${providerDir}/${fileName}` });
+    } catch {
+      // Skip files that no longer exist on disk
+    }
+  }
+
+  await archive.finalize();
 });

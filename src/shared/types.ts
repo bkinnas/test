@@ -13,7 +13,7 @@ export interface BrexTransaction {
   rawRow: Record<string, string>;
 }
 
-export type FetchMethod = "api" | "email" | "portal";
+export type FetchMethod = "api" | "email" | "outlook" | "portal";
 
 export interface ProviderConfig {
   id: string;

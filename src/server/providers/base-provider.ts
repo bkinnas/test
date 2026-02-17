@@ -21,6 +21,8 @@ export abstract class BaseProvider implements InvoiceProvider {
         return this.fetchViaApi(transaction, config);
       case "email":
         return this.fetchViaEmail(transaction, config);
+      case "outlook":
+        return this.fetchViaOutlook(transaction, config);
       case "portal":
         return this.fetchViaPortal(transaction, config);
       default:
@@ -48,6 +50,16 @@ export abstract class BaseProvider implements InvoiceProvider {
     return {
       success: false,
       errorMessage: `${this.name}: Email fetch not implemented`,
+    };
+  }
+
+  async fetchViaOutlook(
+    _transaction: BrexTransaction,
+    _config: ProviderConfig
+  ): Promise<InvoiceFetchResult> {
+    return {
+      success: false,
+      errorMessage: `${this.name}: Outlook fetch not implemented`,
     };
   }
 
