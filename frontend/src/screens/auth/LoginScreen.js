@@ -43,6 +43,13 @@ export function LoginScreen({ navigation }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
+        {/* Back to browse */}
+        {navigation.canGoBack() && (
+          <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
+            <Text style={styles.backText}>← Browse without signing in</Text>
+          </TouchableOpacity>
+        )}
+
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
@@ -98,6 +105,16 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  backRow: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xs,
+  },
+  backText: {
+    color: Colors.primary,
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.medium,
   },
   scroll: {
     flexGrow: 1,
