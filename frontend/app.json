@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "LOCALS",
+    "slug": "locals-community-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A3C5E"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.locals.communityapp",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LOCALS uses your location to find locals near you.",
+        "NSCameraUsageDescription": "Upload photos for your profile and service listings.",
+        "NSPhotoLibraryUsageDescription": "Choose photos from your library for your profile."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A3C5E"
+      },
+      "package": "com.locals.communityapp",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-location",
+      "expo-image-picker",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.locals.communityapp",
+          "enableGooglePay": true
+        }
+      ]
+    ]
+  }
+}
