@@ -52,6 +52,29 @@ function TabIcon({ emoji, focused }) {
   );
 }
 
+// Guest tabs — explore only, no auth required
+function GuestTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textMuted,
+        tabBarStyle: { borderTopColor: Colors.border, paddingBottom: 4 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: Typography.fontWeights.medium },
+        headerShown: false,
+      }}
+    >
+      <Tab.Screen
+        name="Explore"
+        component={SearchScreen}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🔍" focused={focused} />,
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
 // User bottom tabs
 function UserTabs() {
   return (
@@ -126,9 +149,30 @@ function LocalTabs() {
   );
 }
 
-function AuthStack() {
+// Shared public screens appended to every stack
+function publicScreens() {
+  return (
+    <>
+      <Stack.Screen
+        name="LocalProfile"
+        component={LocalProfileScreen}
+        options={{ title: 'Local Profile' }}
+      />
+      <Stack.Screen
+        name="ServiceDetail"
+        component={ServiceDetailScreen}
+        options={{ title: 'Service Details' }}
+      />
+    </>
+  );
+}
+
+// Guest stack — can browse but not book
+function GuestStack() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="GuestHome" component={GuestTabs} options={{ headerShown: false }} />
+      {publicScreens()}
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
     </Stack.Navigator>
@@ -143,16 +187,7 @@ function AppStack({ role }) {
       ) : (
         <Stack.Screen name="UserHome" component={UserTabs} options={{ headerShown: false }} />
       )}
-      <Stack.Screen
-        name="LocalProfile"
-        component={LocalProfileScreen}
-        options={{ title: 'Local Profile' }}
-      />
-      <Stack.Screen
-        name="ServiceDetail"
-        component={ServiceDetailScreen}
-        options={{ title: 'Service Details' }}
-      />
+      {publicScreens()}
       <Stack.Screen
         name="BookingConfirm"
         component={BookingConfirmScreen}
@@ -195,7 +230,7 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <AppStack role={user?.role} /> : <AuthStack />}
+      {isAuthenticated ? <AppStack role={user?.role} /> : <GuestStack />}
     </NavigationContainer>
   );
 }

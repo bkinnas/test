@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,27 +20,78 @@ export function SearchScreen({ navigation }) {
   const [query, setQuery] = useState('');
   const [locals, setLocals] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationLabel, setLocationLabel] = useState('');
   const [usingLocation, setUsingLocation] = useState(false);
-  const user = useAuthStore((s) => s.user);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const search = useCallback(async (params) => {
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // Track if the initial auto-load has run so it doesn't repeat on re-focus
+  const autoLoaded = useRef(false);
+
+  const loadLocals = useCallback(async (params, label) => {
     setLoading(true);
-    setSearched(true);
+    setHasSearched(true);
     try {
       const { locals: results } = await api.searchLocals(params);
       setLocals(results);
+      if (label) setLocationLabel(label);
     } catch (err) {
-      Alert.alert('Search Error', err.message || 'Failed to search. Please try again.');
+      Alert.alert('Error', err.message || 'Failed to load. Please try again.');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // On mount: auto-detect location and show top locals nearby
+  useEffect(() => {
+    if (autoLoaded.current) return;
+    autoLoaded.current = true;
+
+    (async () => {
+      setLocationLoading(true);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setUsingLocation(true);
+
+          // Reverse-geocode to get a city name for the label
+          let cityLabel = 'your area';
+          try {
+            const [place] = await Location.reverseGeocodeAsync({
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            });
+            if (place) {
+              cityLabel = place.city || place.subregion || place.region || 'your area';
+            }
+          } catch (_) {}
+
+          await loadLocals(
+            { lat: loc.coords.latitude, lng: loc.coords.longitude, limit: 20 },
+            cityLabel,
+          );
+        } else {
+          // Location denied — fall through to empty state; user can search manually
+          setUsingLocation(false);
+        }
+      } catch (_) {
+        // Silently fall through; user can search manually
+      } finally {
+        setLocationLoading(false);
+      }
+    })();
+  }, [loadLocals]);
+
   function handleTextSearch() {
     if (!query.trim()) return;
     setUsingLocation(false);
-    search({ city: query.trim() });
+    loadLocals({ city: query.trim() }, query.trim());
   }
 
   async function handleNearMe() {
@@ -53,25 +104,79 @@ export function SearchScreen({ navigation }) {
       return;
     }
     setUsingLocation(true);
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    search({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    setLoading(true);
+    try {
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      let cityLabel = 'your area';
+      try {
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+        if (place) cityLabel = place.city || place.subregion || place.region || 'your area';
+      } catch (_) {}
+      await loadLocals({ lat: loc.coords.latitude, lng: loc.coords.longitude, limit: 20 }, cityLabel);
+    } catch (err) {
+      Alert.alert('Location Error', 'Could not get your location. Please try again.');
+      setLoading(false);
+    }
   }
 
   function handleLogout() {
     useAuthStore.getState().logout();
   }
 
+  // Section header shown above results
+  function SectionHeader() {
+    if (!hasSearched) return null;
+    const label = usingLocation
+      ? `Top guides near ${locationLabel || 'you'}`
+      : `Results in ${locationLabel || query}`;
+    return (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{label}</Text>
+        <Text style={styles.resultCount}>
+          {locals.length} guide{locals.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+    );
+  }
+
+  const showSpinner = loading || locationLoading;
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 👋</Text>
-          <Text style={styles.headerTitle}>Find a Local</Text>
+          {isAuthenticated ? (
+            <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0]} 👋</Text>
+          ) : (
+            <Text style={styles.greeting}>Welcome to LOCALS</Text>
+          )}
+          <Text style={styles.headerTitle}>Find a Local Guide</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Sign Out</Text>
-        </TouchableOpacity>
+
+        {isAuthenticated ? (
+          <TouchableOpacity onPress={handleLogout} style={styles.authButton}>
+            <Text style={styles.authButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.guestButtons}>
+            <TouchableOpacity
+              style={styles.signInButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.signInText}>Sign In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={() => navigation.navigate('Register')}
+            >
+              <Text style={styles.joinText}>Join</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Search bar */}
@@ -103,23 +208,27 @@ export function SearchScreen({ navigation }) {
         <Text style={styles.nearMeText}>📍  Find locals near me</Text>
       </TouchableOpacity>
 
-      {/* Results */}
-      {loading ? (
+      {/* Results / states */}
+      {showSpinner ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>
-            {usingLocation ? 'Finding locals near you...' : `Searching in ${query}...`}
+            {locationLoading && !loading
+              ? 'Detecting your location...'
+              : usingLocation
+              ? `Finding top guides near ${locationLabel || 'you'}...`
+              : `Searching in ${query}...`}
           </Text>
         </View>
-      ) : searched && locals.length === 0 ? (
+      ) : hasSearched && locals.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>🏙</Text>
-          <Text style={styles.emptyTitle}>No locals found</Text>
+          <Text style={styles.emptyTitle}>No guides found</Text>
           <Text style={styles.emptySubtitle}>
-            Try a different city or search near your location.
+            Try a different city or tap "Find locals near me".
           </Text>
         </View>
-      ) : !searched ? (
+      ) : !hasSearched ? (
         <View style={styles.center}>
           <Text style={styles.emptyEmoji}>📍</Text>
           <Text style={styles.emptyTitle}>Discover your destination</Text>
@@ -139,12 +248,7 @@ export function SearchScreen({ navigation }) {
           )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <Text style={styles.resultCount}>
-              {locals.length} local{locals.length !== 1 ? 's' : ''} found
-              {usingLocation ? ' near you' : ` in ${query}`}
-            </Text>
-          }
+          ListHeaderComponent={<SectionHeader />}
         />
       )}
     </SafeAreaView>
@@ -173,13 +277,38 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeights.extrabold,
     color: Colors.primary,
   },
-  logoutButton: {
+  authButton: {
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
   },
-  logoutText: {
+  authButtonText: {
     color: Colors.textMuted,
     fontSize: Typography.fontSizes.sm,
+  },
+  guestButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  signInButton: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
+  signInText: {
+    color: Colors.primary,
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.semibold,
+  },
+  joinButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+  },
+  joinText: {
+    color: Colors.textOnPrimary,
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.semibold,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -241,15 +370,25 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeights.semibold,
     fontSize: Typography.fontSizes.md,
   },
-  list: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSizes.lg,
+    fontWeight: Typography.fontWeights.bold,
+    color: Colors.textPrimary,
   },
   resultCount: {
     fontSize: Typography.fontSizes.sm,
     color: Colors.textSecondary,
-    marginBottom: Spacing.md,
     fontWeight: Typography.fontWeights.medium,
+  },
+  list: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   center: {
     flex: 1,
@@ -278,5 +417,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     color: Colors.textSecondary,
     fontSize: Typography.fontSizes.md,
+    textAlign: 'center',
   },
 });
