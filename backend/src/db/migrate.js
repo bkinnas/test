@@ -95,6 +95,12 @@ const migrations = `
     created_at  TIMESTAMPTZ DEFAULT NOW()
   );
 
+  -- Payout info for locals (added via ALTER so safe to run on existing DBs)
+  ALTER TABLE local_profiles
+    ADD COLUMN IF NOT EXISTS payout_method TEXT CHECK (payout_method IN ('paypal', 'venmo')),
+    ADD COLUMN IF NOT EXISTS paypal_email   TEXT,
+    ADD COLUMN IF NOT EXISTS venmo_handle   TEXT;
+
   -- Indexes for common queries
   CREATE INDEX IF NOT EXISTS idx_local_profiles_city ON local_profiles(city);
   CREATE INDEX IF NOT EXISTS idx_local_profiles_location ON local_profiles(lat, lng);

@@ -38,12 +38,13 @@ router.post(
       );
       const user = rows[0];
 
-      // If registering as a local, create empty profile
+      // If registering as a local, create profile with payout info
       if (role === 'local') {
-        const city = req.body.city || '';
+        const { city = '', payout_method, paypal_email, venmo_handle } = req.body;
         await pool.query(
-          'INSERT INTO local_profiles (user_id, city) VALUES ($1, $2)',
-          [user.id, city]
+          `INSERT INTO local_profiles (user_id, city, payout_method, paypal_email, venmo_handle)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [user.id, city, payout_method || null, paypal_email || null, venmo_handle || null]
         );
       }
 

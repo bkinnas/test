@@ -136,19 +136,22 @@ router.get('/my/profile', authenticate, requireLocal, async (req, res, next) => 
 
 // PUT /api/locals/my/profile — Update own profile
 router.put('/my/profile', authenticate, requireLocal, async (req, res, next) => {
-  const { bio, tagline, city, location_text, lat, lng } = req.body;
+  const { bio, tagline, city, location_text, lat, lng, payout_method, paypal_email, venmo_handle } = req.body;
   try {
     const { rows } = await pool.query(
       `UPDATE local_profiles
-       SET bio = COALESCE($1, bio),
-           tagline = COALESCE($2, tagline),
-           city = COALESCE($3, city),
-           location_text = COALESCE($4, location_text),
-           lat = COALESCE($5, lat),
-           lng = COALESCE($6, lng)
+       SET bio           = COALESCE($1,  bio),
+           tagline       = COALESCE($2,  tagline),
+           city          = COALESCE($3,  city),
+           location_text = COALESCE($4,  location_text),
+           lat           = COALESCE($5,  lat),
+           lng           = COALESCE($6,  lng),
+           payout_method = COALESCE($8,  payout_method),
+           paypal_email  = COALESCE($9,  paypal_email),
+           venmo_handle  = COALESCE($10, venmo_handle)
        WHERE user_id = $7
        RETURNING *`,
-      [bio, tagline, city, location_text, lat, lng, req.user.id]
+      [bio, tagline, city, location_text, lat, lng, req.user.id, payout_method, paypal_email, venmo_handle]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Profile not found' });
     res.json(rows[0]);
@@ -182,7 +185,7 @@ router.post(
 router.get('/my/dashboard', authenticate, requireLocal, async (req, res, next) => {
   try {
     const { rows: [lp] } = await pool.query(
-      'SELECT id FROM local_profiles WHERE user_id = $1',
+      'SELECT id, payout_method, paypal_email, venmo_handle FROM local_profiles WHERE user_id = $1',
       [req.user.id]
     );
     if (!lp) return res.status(404).json({ error: 'Profile not found' });
@@ -225,11 +228,16 @@ router.get('/my/dashboard', authenticate, requireLocal, async (req, res, next) =
       ),
     ]);
 
+    const grossEarnings = Number(earningsResult.rows[0].total_earnings) || 0;
     res.json({
       upcoming_bookings: bookingsResult.rows,
-      total_earnings: earningsResult.rows[0].total_earnings,
+      total_earnings: grossEarnings,
+      net_earnings: (grossEarnings * 0.85).toFixed(2),
       unread_messages: unreadResult.rows[0].unread_count,
       recent_reviews: reviewsResult.rows,
+      payout_method: lp.payout_method,
+      paypal_email: lp.paypal_email,
+      venmo_handle: lp.venmo_handle,
     });
   } catch (err) {
     next(err);

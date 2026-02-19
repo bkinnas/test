@@ -79,13 +79,26 @@ export function LocalDashboardScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Payout method warning */}
+        {!data?.payout_method && (
+          <TouchableOpacity
+            style={styles.payoutWarning}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={styles.payoutWarningText}>
+              ⚠️  Add a payout method (PayPal or Venmo) in your profile so you can receive earnings.
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>
-              ${Number(data?.total_earnings || 0).toFixed(0)}
+              ${Number(data?.net_earnings || 0).toFixed(0)}
             </Text>
-            <Text style={styles.statLabel}>Total Earnings</Text>
+            <Text style={styles.statLabel}>Your Earnings</Text>
+            <Text style={styles.statSub}>after 15% fee</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{data?.upcoming_bookings?.length || 0}</Text>
@@ -96,6 +109,17 @@ export function LocalDashboardScreen({ navigation }) {
             <Text style={styles.statLabel}>Unread Msgs</Text>
           </View>
         </View>
+
+        {/* Payout info */}
+        {data?.payout_method && (
+          <View style={styles.payoutInfo}>
+            <Text style={styles.payoutInfoText}>
+              {data.payout_method === 'paypal'
+                ? `💙 Paid via PayPal to ${data.paypal_email}`
+                : `💜 Paid via Venmo to ${data.venmo_handle}`}
+            </Text>
+          </View>
+        )}
 
         {/* Upcoming bookings */}
         <View style={styles.section}>
@@ -214,6 +238,39 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
     marginTop: 2,
     textAlign: 'center',
+  },
+  statSub: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.55)',
+    textAlign: 'center',
+  },
+  payoutWarning: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: '#FEF9C3',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: '#EAB308',
+  },
+  payoutWarningText: {
+    fontSize: Typography.fontSizes.sm,
+    color: '#78350F',
+    lineHeight: 20,
+  },
+  payoutInfo: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  payoutInfoText: {
+    fontSize: Typography.fontSizes.sm,
+    color: Colors.textSecondary,
   },
   section: {
     paddingHorizontal: Spacing.lg,

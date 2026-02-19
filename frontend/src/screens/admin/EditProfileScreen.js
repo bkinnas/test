@@ -30,6 +30,9 @@ export function EditProfileScreen() {
   const [tagline, setTagline] = useState('');
   const [city, setCity] = useState('');
   const [locationText, setLocationText] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState('paypal');
+  const [paypalEmail, setPaypalEmail] = useState('');
+  const [venmoHandle, setVenmoHandle] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -43,6 +46,9 @@ export function EditProfileScreen() {
         setTagline(data.tagline || '');
         setCity(data.city || '');
         setLocationText(data.location_text || '');
+        setPayoutMethod(data.payout_method || 'paypal');
+        setPaypalEmail(data.paypal_email || '');
+        setVenmoHandle(data.venmo_handle || '');
       } catch (err) {
         Alert.alert('Error', err.message || 'Failed to load profile.');
       } finally {
@@ -60,6 +66,9 @@ export function EditProfileScreen() {
         tagline: tagline.trim() || null,
         city: city.trim(),
         location_text: locationText.trim() || null,
+        payout_method: payoutMethod,
+        paypal_email: payoutMethod === 'paypal' ? paypalEmail.trim().toLowerCase() || null : null,
+        venmo_handle: payoutMethod === 'venmo' ? venmoHandle.trim() || null : null,
       });
       setProfile(updated);
       Alert.alert('Saved', 'Your profile has been updated.');
@@ -206,6 +215,52 @@ export function EditProfileScreen() {
               maxLength={1000}
             />
 
+            {/* Payout method */}
+            <Text style={styles.payoutLabel}>Payout Method</Text>
+            <Text style={styles.payoutNote}>
+              You earn 85% of each booking. The remaining 15% is a platform fee.
+            </Text>
+            <View style={styles.payoutRow}>
+              <TouchableOpacity
+                style={[styles.payoutCard, payoutMethod === 'paypal' && styles.payoutCardActive]}
+                onPress={() => setPayoutMethod('paypal')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.payoutEmoji}>💙</Text>
+                <Text style={[styles.payoutCardLabel, payoutMethod === 'paypal' && styles.payoutCardLabelActive]}>
+                  PayPal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.payoutCard, payoutMethod === 'venmo' && styles.payoutCardActive]}
+                onPress={() => setPayoutMethod('venmo')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.payoutEmoji}>💜</Text>
+                <Text style={[styles.payoutCardLabel, payoutMethod === 'venmo' && styles.payoutCardLabelActive]}>
+                  Venmo
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {payoutMethod === 'paypal' ? (
+              <Input
+                label="PayPal Email"
+                value={paypalEmail}
+                onChangeText={setPaypalEmail}
+                placeholder="your@paypal.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            ) : (
+              <Input
+                label="Venmo Username"
+                value={venmoHandle}
+                onChangeText={setVenmoHandle}
+                placeholder="@yourhandle"
+                autoCapitalize="none"
+              />
+            )}
+
             <Button
               title="Save Profile"
               onPress={handleSave}
@@ -286,4 +341,42 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     ...Shadows.sm,
   },
+  payoutLabel: {
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.semibold,
+    color: Colors.textPrimary,
+    marginTop: Spacing.md,
+    marginBottom: 2,
+  },
+  payoutNote: {
+    fontSize: Typography.fontSizes.xs,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+    lineHeight: 16,
+  },
+  payoutRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  payoutCard: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  payoutCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#EBF2FA',
+  },
+  payoutEmoji: { fontSize: 22, marginBottom: 4 },
+  payoutCardLabel: {
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.bold,
+    color: Colors.textSecondary,
+  },
+  payoutCardLabelActive: { color: Colors.primary },
 });

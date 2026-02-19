@@ -36,6 +36,9 @@ export function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('user');
   const [city, setCity] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState('paypal');
+  const [paypalEmail, setPaypalEmail] = useState('');
+  const [venmoHandle, setVenmoHandle] = useState('');
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
 
@@ -52,9 +55,28 @@ export function RegisterScreen({ navigation }) {
       Alert.alert('City required', 'Please enter your city so users can find you.');
       return;
     }
+    if (role === 'local') {
+      if (payoutMethod === 'paypal' && !paypalEmail.trim()) {
+        Alert.alert('PayPal email required', 'Please enter your PayPal email so we can pay you.');
+        return;
+      }
+      if (payoutMethod === 'venmo' && !venmoHandle.trim()) {
+        Alert.alert('Venmo handle required', 'Please enter your Venmo username so we can pay you.');
+        return;
+      }
+    }
     setLoading(true);
     try {
-      await register({ name: name.trim(), email: email.trim().toLowerCase(), password, role, city: city.trim() });
+      await register({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+        city: city.trim(),
+        payout_method: role === 'local' ? payoutMethod : undefined,
+        paypal_email: role === 'local' && payoutMethod === 'paypal' ? paypalEmail.trim().toLowerCase() : undefined,
+        venmo_handle: role === 'local' && payoutMethod === 'venmo' ? venmoHandle.trim() : undefined,
+      });
     } catch (err) {
       Alert.alert('Registration Failed', err.message || 'Something went wrong. Please try again.');
     } finally {
@@ -118,12 +140,60 @@ export function RegisterScreen({ navigation }) {
               secureTextEntry
             />
             {role === 'local' && (
-              <Input
-                label="Your City"
-                value={city}
-                onChangeText={setCity}
-                placeholder="e.g. Austin, TX"
-              />
+              <>
+                <Input
+                  label="Your City"
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="e.g. Austin, TX"
+                />
+
+                {/* Payout method */}
+                <Text style={styles.payoutLabel}>How would you like to be paid?</Text>
+                <Text style={styles.payoutNote}>
+                  You earn 85% of each booking — the remaining 15% is a platform fee.
+                </Text>
+                <View style={styles.payoutRow}>
+                  <TouchableOpacity
+                    style={[styles.payoutCard, payoutMethod === 'paypal' && styles.payoutCardActive]}
+                    onPress={() => setPayoutMethod('paypal')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.payoutEmoji}>💙</Text>
+                    <Text style={[styles.payoutCardLabel, payoutMethod === 'paypal' && styles.payoutCardLabelActive]}>
+                      PayPal
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.payoutCard, payoutMethod === 'venmo' && styles.payoutCardActive]}
+                    onPress={() => setPayoutMethod('venmo')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.payoutEmoji}>💜</Text>
+                    <Text style={[styles.payoutCardLabel, payoutMethod === 'venmo' && styles.payoutCardLabelActive]}>
+                      Venmo
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {payoutMethod === 'paypal' ? (
+                  <Input
+                    label="PayPal Email"
+                    value={paypalEmail}
+                    onChangeText={setPaypalEmail}
+                    placeholder="your@paypal.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                ) : (
+                  <Input
+                    label="Venmo Username"
+                    value={venmoHandle}
+                    onChangeText={setVenmoHandle}
+                    placeholder="@yourhandle"
+                    autoCapitalize="none"
+                  />
+                )}
+              </>
             )}
 
             <Button
@@ -220,4 +290,42 @@ const styles = StyleSheet.create({
   },
   footerText: { color: Colors.textSecondary, fontSize: Typography.fontSizes.md },
   footerLink: { color: Colors.primary, fontSize: Typography.fontSizes.md, fontWeight: Typography.fontWeights.bold },
+  payoutLabel: {
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.semibold,
+    color: Colors.textPrimary,
+    marginTop: Spacing.sm,
+    marginBottom: 2,
+  },
+  payoutNote: {
+    fontSize: Typography.fontSizes.xs,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+    lineHeight: 16,
+  },
+  payoutRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  payoutCard: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  payoutCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#EBF2FA',
+  },
+  payoutEmoji: { fontSize: 22, marginBottom: 4 },
+  payoutCardLabel: {
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.bold,
+    color: Colors.textSecondary,
+  },
+  payoutCardLabelActive: { color: Colors.primary },
 });
