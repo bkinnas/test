@@ -156,7 +156,7 @@ function publicScreens() {
       <Stack.Screen
         name="LocalProfile"
         component={LocalProfileScreen}
-        options={{ title: 'Local Profile' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ServiceDetail"

@@ -56,6 +56,32 @@ router.get('/local', authenticate, requireLocal, async (req, res, next) => {
   }
 });
 
+// GET /api/bookings/review-eligible/:localId — Check if user has a completed unreviewed booking for this local
+router.get('/review-eligible/:localId', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT b.id AS booking_id
+       FROM bookings b
+       JOIN services s ON s.id = b.service_id
+       WHERE b.user_id = $1
+         AND s.local_id = $2
+         AND b.status = 'completed'
+         AND NOT EXISTS (
+           SELECT 1 FROM reviews r WHERE r.booking_id = b.id
+         )
+       LIMIT 1`,
+      [req.user.id, req.params.localId]
+    );
+    if (rows.length > 0) {
+      res.json({ eligible: true, booking_id: rows[0].booking_id });
+    } else {
+      res.json({ eligible: false });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/bookings/:id — Get single booking (owner or local)
 router.get('/:id', authenticate, async (req, res, next) => {
   try {

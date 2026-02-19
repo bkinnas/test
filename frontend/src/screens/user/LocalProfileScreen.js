@@ -7,9 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import { StarRating } from '../../components/common/StarRating';
 import { Avatar } from '../../components/common/Avatar';
 import { ServiceCard } from '../../components/booking/ServiceCard';
@@ -18,10 +20,13 @@ import { format } from 'date-fns';
 
 export function LocalProfileScreen({ route, navigation }) {
   const { localId } = route.params;
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [profile, setProfile] = useState(null);
   const [services, setServices] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewEligible, setReviewEligible] = useState(false);
+  const [eligibleBookingId, setEligibleBookingId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -30,6 +35,16 @@ export function LocalProfileScreen({ route, navigation }) {
         setProfile(data.profile);
         setServices(data.services);
         setReviews(data.reviews);
+
+        if (isAuthenticated) {
+          try {
+            const eligibility = await api.checkReviewEligible(localId);
+            setReviewEligible(eligibility.eligible);
+            setEligibleBookingId(eligibility.booking_id || null);
+          } catch (_) {
+            // not blocking
+          }
+        }
       } catch (err) {
         Alert.alert('Error', err.message || 'Failed to load profile.');
       } finally {
@@ -51,14 +66,21 @@ export function LocalProfileScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-      {/* Cover photo */}
-      {profile.cover_photo_url ? (
-        <Image source={{ uri: profile.cover_photo_url }} style={styles.cover} />
-      ) : (
-        <View style={[styles.cover, styles.coverPlaceholder]}>
-          <Text style={styles.coverEmoji}>🌆</Text>
-        </View>
-      )}
+      {/* Cover photo with back button */}
+      <View>
+        {profile.cover_photo_url ? (
+          <Image source={{ uri: profile.cover_photo_url }} style={styles.cover} />
+        ) : (
+          <View style={[styles.cover, styles.coverPlaceholder]}>
+            <Text style={styles.coverEmoji}>🌆</Text>
+          </View>
+        )}
+        <SafeAreaView edges={['top']} style={styles.backButtonContainer}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>‹</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </View>
 
       {/* Profile header */}
       <View style={styles.profileHeader}>
@@ -98,11 +120,26 @@ export function LocalProfileScreen({ route, navigation }) {
 
       {/* Reviews section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Reviews ({reviews.length})
-        </Text>
+        <View style={styles.reviewsHeader}>
+          <Text style={styles.sectionTitle}>
+            Reviews ({reviews.length})
+          </Text>
+          {reviewEligible && (
+            <TouchableOpacity
+              style={styles.writeReviewButton}
+              onPress={() =>
+                navigation.navigate('Review', {
+                  bookingId: eligibleBookingId,
+                  localProfileId: localId,
+                })
+              }
+            >
+              <Text style={styles.writeReviewText}>✍️ Write a Review</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {reviews.length === 0 ? (
-          <Text style={styles.noReviews}>No reviews yet — be the first!</Text>
+          <Text style={styles.noReviews}>No reviews yet.</Text>
         ) : (
           reviews.map((review) => (
             <ReviewItem key={review.id} review={review} />
@@ -158,6 +195,28 @@ const styles = StyleSheet.create({
   coverEmoji: {
     fontSize: 64,
   },
+  backButtonContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  backButton: {
+    marginTop: Spacing.sm,
+    marginLeft: Spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: Typography.fontWeights.bold,
+    marginTop: -2,
+  },
   profileHeader: {
     backgroundColor: Colors.surface,
     padding: Spacing.lg,
@@ -211,6 +270,23 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeights.bold,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  writeReviewButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+  },
+  writeReviewText: {
+    color: '#fff',
+    fontSize: Typography.fontSizes.sm,
+    fontWeight: Typography.fontWeights.semibold,
   },
   noReviews: {
     color: Colors.textMuted,

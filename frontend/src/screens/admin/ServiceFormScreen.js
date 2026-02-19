@@ -8,7 +8,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import { api } from '../../services/api';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -20,6 +24,13 @@ const SERVICE_TYPES = [
   { key: 'tour', label: 'Guided Tour', emoji: '🗺', desc: 'In-person experience with a set date & time' },
 ];
 
+function getBaseUrl() {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (host) return `http://${host}:3000/api`;
+  return 'http://localhost:3000/api';
+}
+
 export function ServiceFormScreen({ route, navigation }) {
   const existing = route.params?.service;
 
@@ -29,6 +40,8 @@ export function ServiceFormScreen({ route, navigation }) {
   const [price, setPrice] = useState(existing?.price ? String(existing.price) : '');
   const [duration, setDuration] = useState(existing?.duration_minutes ? String(existing.duration_minutes) : '');
   const [loading, setLoading] = useState(false);
+  const [photos, setPhotos] = useState(existing?.photos || []);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   async function handleSave() {
     if (!title.trim()) {
@@ -61,6 +74,53 @@ export function ServiceFormScreen({ route, navigation }) {
       Alert.alert('Error', err.message || 'Failed to save service.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAddPhotos() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setUploadingPhotos(true);
+      try {
+        const formData = new FormData();
+        result.assets.forEach((asset, i) => {
+          formData.append('photos', {
+            uri: asset.uri,
+            name: `photo_${i}.jpg`,
+            type: 'image/jpeg',
+          });
+        });
+
+        const token = await SecureStore.getItemAsync('auth_token');
+        const BASE_URL = getBaseUrl();
+        const response = await fetch(`${BASE_URL}/services/${existing.id}/photos`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setPhotos(data.photos || []);
+          Alert.alert('Uploaded', 'Photos added successfully.');
+        } else {
+          Alert.alert('Upload Failed', data.error || 'Please try again.');
+        }
+      } catch (err) {
+        Alert.alert('Error', err.message || 'Upload failed.');
+      } finally {
+        setUploadingPhotos(false);
+      }
     }
   }
 
@@ -149,23 +209,54 @@ export function ServiceFormScreen({ route, navigation }) {
           ) : null}
         </View>
 
-        {/* Tips by type */}
-        <View style={styles.tipBox}>
-          <Text style={styles.tipTitle}>
-            {type === 'tour'
-              ? '📸 Tour Tips'
-              : type === 'email'
-              ? '✉ Email Tips'
-              : '💡 Message Tips'}
-          </Text>
-          <Text style={styles.tipText}>
-            {type === 'tour'
-              ? 'You can upload photos after creating the service. Use the "Services" tab to manage your listings and upload tour photos.'
-              : type === 'email'
-              ? 'Users will provide their email on purchase. Include your typical response time in the description.'
-              : 'Once booked, users can message you directly through the app. Set a clear expectation for your availability.'}
-          </Text>
-        </View>
+        {/* Photos section — only shown when editing an existing service */}
+        {existing ? (
+          <View style={styles.photosSection}>
+            <Text style={styles.sectionLabel}>Service Photos</Text>
+            {photos.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.photosScroll}
+              >
+                {photos.map((uri, idx) => (
+                  <Image key={idx} source={{ uri }} style={styles.photoThumb} />
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity
+              style={styles.addPhotosButton}
+              onPress={handleAddPhotos}
+              disabled={uploadingPhotos}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addPhotosText}>
+                {uploadingPhotos ? '⏳ Uploading...' : '📷 Add Photos'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.photosHint}>
+              Up to 8 photos total. Great photos help attract more bookings.
+            </Text>
+          </View>
+        ) : (
+          /* Tips box — only shown for new services */
+          <View style={styles.tipBox}>
+            <Text style={styles.tipTitle}>
+              {type === 'tour'
+                ? '📸 Tour Tips'
+                : type === 'email'
+                ? '✉ Email Tips'
+                : '💡 Message Tips'}
+            </Text>
+            <Text style={styles.tipText}>
+              {type === 'tour'
+                ? 'After creating, come back to edit this service to upload tour photos.'
+                : type === 'email'
+                ? 'Users will provide their email on purchase. Include your typical response time in the description.'
+                : 'Once booked, users can message you directly through the app. Set a clear expectation for your availability.'}
+            </Text>
+          </View>
+        )}
 
         <Button
           title={existing ? 'Save Changes' : 'Create Service'}
@@ -232,5 +323,37 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSizes.sm,
     color: Colors.textSecondary,
     lineHeight: 20,
+  },
+  photosSection: {
+    marginBottom: Spacing.md,
+  },
+  photosScroll: {
+    marginBottom: Spacing.sm,
+  },
+  photoThumb: {
+    width: 90,
+    height: 90,
+    borderRadius: Radius.md,
+    marginRight: Spacing.sm,
+  },
+  addPhotosButton: {
+    backgroundColor: Colors.surfaceAlt,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  addPhotosText: {
+    color: Colors.primary,
+    fontWeight: Typography.fontWeights.semibold,
+    fontSize: Typography.fontSizes.md,
+  },
+  photosHint: {
+    fontSize: Typography.fontSizes.xs,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
 });

@@ -96,6 +96,7 @@ export const api = {
   // Reviews
   getReviews: (localId) => request(`/reviews/local/${localId}`),
   submitReview: (body) => request('/reviews', { method: 'POST', body: JSON.stringify(body) }),
+  checkReviewEligible: (localId) => request(`/bookings/review-eligible/${localId}`),
 
   // Messages
   getMessages: (bookingId) => request(`/messages/${bookingId}`),
