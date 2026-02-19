@@ -10,6 +10,8 @@ import { Colors, Typography } from '../theme';
 // Auth screens
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { RegisterScreen } from '../screens/auth/RegisterScreen';
+import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
+import { ResetPasswordScreen } from '../screens/auth/ResetPasswordScreen';
 
 // User screens
 import { SearchScreen } from '../screens/user/SearchScreen';
@@ -175,6 +177,8 @@ function GuestStack() {
       {publicScreens()}
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Create Account' }} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -219,6 +223,15 @@ function AppStack({ role }) {
   );
 }
 
+const linking = {
+  prefixes: ['locals://'],
+  config: {
+    screens: {
+      ResetPassword: 'reset-password',
+    },
+  },
+};
+
 export function AppNavigator() {
   const { isAuthenticated, isLoading, user, initialize } = useAuthStore();
 
@@ -229,7 +242,7 @@ export function AppNavigator() {
   if (isLoading) return <LoadingScreen message="Loading LOCALS..." />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {isAuthenticated ? <AppStack role={user?.role} /> : <GuestStack />}
     </NavigationContainer>
   );

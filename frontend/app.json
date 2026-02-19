@@ -3,6 +3,7 @@
     "name": "LOCALS",
     "slug": "locals-community-app",
     "version": "1.0.0",
+    "scheme": "locals",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
