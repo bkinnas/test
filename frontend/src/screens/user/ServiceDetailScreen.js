@@ -15,6 +15,7 @@ import { Button } from '../../components/common/Button';
 import { Avatar } from '../../components/common/Avatar';
 import { StarRating } from '../../components/common/StarRating';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../theme';
+import { useAuthStore } from '../../store/authStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ const TYPE_DESCRIPTIONS = {
 
 export function ServiceDetailScreen({ route, navigation }) {
   const { serviceId, localId } = route.params;
+  const { isAuthenticated } = useAuthStore();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +57,10 @@ export function ServiceDetailScreen({ route, navigation }) {
   const photos = Array.isArray(service.photos) ? service.photos : [];
 
   function handleBook() {
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
     navigation.navigate('BookingConfirm', { service, localId });
   }
 
