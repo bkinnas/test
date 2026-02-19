@@ -1,6 +1,19 @@
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+function getBaseUrl() {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  // In Expo Go, derive the API host from the dev server so it works on physical devices
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (host) {
+    return `http://${host}:3000/api`;
+  }
+  return 'http://localhost:3000/api';
+}
+
+const BASE_URL = getBaseUrl();
 
 async function getToken() {
   return SecureStore.getItemAsync('auth_token');
