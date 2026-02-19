@@ -65,9 +65,9 @@ export function LocalProfileScreen({ route, navigation }) {
   if (!profile) return null;
 
   return (
-    <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-      {/* Cover photo with back button */}
-      <View>
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Cover photo */}
         {profile.cover_photo_url ? (
           <Image source={{ uri: profile.cover_photo_url }} style={styles.cover} />
         ) : (
@@ -75,12 +75,6 @@ export function LocalProfileScreen({ route, navigation }) {
             <Text style={styles.coverEmoji}>🌆</Text>
           </View>
         )}
-        <SafeAreaView edges={['top']} style={styles.backButtonContainer}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>‹</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
-      </View>
 
       {/* Profile header */}
       <View style={styles.profileHeader}>
@@ -147,8 +141,16 @@ export function LocalProfileScreen({ route, navigation }) {
         )}
       </View>
 
-      <View style={{ height: Spacing.xl }} />
-    </ScrollView>
+        <View style={{ height: Spacing.xl }} />
+      </ScrollView>
+
+      {/* Back button — fixed overlay, always visible regardless of scroll position */}
+      <SafeAreaView edges={['top']} style={styles.backButtonContainer}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>‹</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
