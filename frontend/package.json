@@ -16,7 +16,7 @@
     "@react-navigation/native-stack": "^6.9.26",
     "@stripe/stripe-react-native": "^0.37.2",
     "date-fns": "^3.6.0",
-    "expo": "~54.0.0",
+    "expo": "~52.0.0",
     "expo-dev-client": "~5.0.0",
     "expo-calendar": "~15.0.0",
     "expo-constants": "~17.0.0",
