@@ -35,6 +35,7 @@
       ]
     },
     "plugins": [
+      "expo-dev-client",
       "expo-location",
       "expo-image-picker",
       [
